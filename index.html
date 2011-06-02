@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>JavaScript brainfuck interpreter</title>
+		<style>
+			label, 
+			textarea { display: block; }
+			label { margin-top: 1em; }
+			textarea { width: 600px; }
+			#program { height: 10em; }
+			#out { height: 5em; }
+			#in { height: 2em; }
+			#in.waiting { background-color: #ff9; }
+			#wrap {
+				width: 700px;
+				margin: 0 auto;
+			}
+			#stack {
+				display: block;
+				float: right;
+				font-family: monospace;
+				font-size: 12px;
+				width: 50px;
+				list-style-position: inside;
+				font-weight: bold;
+			}
+			#stack .current {
+				background-color: #000;
+				color: #fff;
+			}
+			#delay { width: 2em; }
+			#delay-label { display: inline; }
+		</style>
+		<script>
+			window.onload = function(){
+				
+				// helpers
+				function norm(cur, min, max) {
+					return cur > max ? min : (cur < min ? max : cur);
+				}
+				var max_call_stack_deep = 100,
+					cur_deep = 0;
+				function async(func) {
+					return function(callback){
+						func();
+						if (cur_deep >= max_call_stack_deep) {
+							cur_deep = 0;
+							setTimeout(callback, 0);
+						} else {
+							cur_deep++;
+							callback();
+						}
+					};
+				}
+				var id = document.getElementById.bind(document),
+					q = document.querySelectorAll.bind(document);
+				
+				
+				// DOM stuff
+				var dom = {
+					program_el: id("program"),
+					input_el: id("in"),
+					output_el: id("out"),
+					run_el: id("run"),
+					read: function(callback) {
+						var val = this.input_el.value;
+						if (val === '') {
+							this.input_el.className = "waiting";
+							this.input_el.onchange = function(){ 
+								this.read(callback);
+								this.input_el.onchange = null;
+							}.bind(this)
+						} else {
+							this.input_el.className = "";
+							this.input_el.value = val.slice(1);
+							callback( val.charCodeAt(0) );
+						} 
+					},
+					write: function(symbol) { this.output_el.value += String.fromCharCode(symbol); },
+					clear_out: function() { this.output_el.value = ''; },
+					get_program: function() { return this.program_el.value; }
+				};
+					
+				// Stack
+				var stack = new Array(1000);
+				stack.cursor = 0;
+				stack.val = function(val, undefined) {
+					if (val !== undefined) {
+						this[this.cursor] = norm(val, 0, 255);
+						this.on_change &&
+							this.on_change(this.cursor, this.val());
+					}
+					return this[this.cursor] || 0;
+				};
+				stack.go = function(val) {
+					this.cursor = norm(this.cursor + val, 0, this.length - 1);
+					this.on_move &&
+						this.on_move(this.cursor);
+				};
+				stack.add = function(val) { this.val( this.val() + val ); };
+				stack.init = function() {
+					this.cursor = 0;
+					
+					var i = -1;
+					while (++i < this.length)
+						this[i] = 0;
+						
+					this.on_init &&
+						this.on_init();
+				};
+				
+				// Program
+				var program = {
+					code: [],
+					cursor: 0,
+					in_run: false,
+					delay: 0,
+					comands: {
+						'>': async( stack.go.bind(stack, +1) ),
+						'<': async( stack.go.bind(stack, -1) ),
+						'+': async( stack.add.bind(stack, +1) ),
+						'-': async( stack.add.bind(stack, -1) ),
+						'.': async( function(){ dom.write( stack.val() ); } ),
+						',': function(callback){ // only this one realy async
+							dom.read(function(val){
+								stack.val(val);
+								callback();
+							});
+						},
+						'[': async( function(){ stack.val() === 0 && program.goTo(']', '['); } ),
+						']': async( function(){ stack.val() !== 0 && program.goTo('[', ']', true); } )
+					},
+					init: function(code) {
+						this.cursor = 0;
+						this.code = ('' + code).split('');
+					},
+					comand: function(){ return this.code[this.cursor]; },
+					has_next: function(){ return this.cursor < this.code.length; },
+					next: function(callback) {
+						if ( !this.has_next() ) {
+							callback();
+							return;
+						}
+						
+						var com = this.comands[ this.comand() ];
+						var cont = function(){
+							this.cursor++;
+							callback();
+						}.bind(this);
+						com ?
+							com(cont) :
+						 	cont();
+					},
+					goTo: function(s1, s2, back) {
+						var deep = 0;
+						while(true) {
+							back ? this.cursor-- : this.cursor++;
+							if (this.cursor >= this.code.length || this.cursor < -1)
+								throw 'loop error';
+							if (this.comand() === s1 && deep === 0)
+								break;
+							this.comand() === s2 && deep++;
+							this.comand() === s1 && deep--;
+						}
+					},
+					run: function() {
+						if (!this.in_run) {
+							this.in_run = true;
+							
+							dom.clear_out();
+							
+							stack.init();
+							this.init( dom.get_program() )
+							var loop_body = function(){
+								if ( program.has_next() ) {
+									if (this.delay)
+										setTimeout( this.next.bind(this, loop_body), this.delay );
+									else
+										this.next( loop_body );
+								} else
+									this.in_run = false;
+							}.bind(this);
+							loop_body();
+						}
+					}
+				};
+				
+				// Connecting DOM & main logic
+				dom.run_el.onclick = program.run.bind(program);
+				stack.on_move = function(new_cursor_position){
+					var cur = q('#stack .current')[0];
+					if (cur) 
+						cur.className = '';
+						
+					id('st' + new_cursor_position).className = "current";
+				};
+				stack.on_change = function(cursor, new_value){
+					id('st' + cursor).innerHTML = new_value;
+				};
+				stack.on_init = function() {
+					for (var i = 0, len = stack.length; i < len; i++ )
+						id('st' + i).innerHTML = 0;
+					stack.on_move(0);
+				};
+				
+				var html = '';
+				for (var i = 0, len = stack.length; i < len; i++ )
+					 html += '<li id="st' + i + '">0</li>';
+					 
+				id('stack').innerHTML = html;
+				
+				id('delay').onchange = function () { program.delay = Number(this.value); };
+			};
+		</script>
+	</head>
+	<body>
+		<div id="wrap">
+			<header>
+				<h1>JavaScript brainfuck interpreter</h1>
+			</header>
+			<div>
+				<ol id="stack" start="0"></ol>
+				
+				<label for="program">Program:</label>
+				<textarea id="program">++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>.</textarea>
+				
+				<label for="in">Input:</label>
+				<textarea id="in"></textarea>
+				
+				<label for="out">Output:</label>
+				<textarea id="out" readonly></textarea>
+				
+				<br>
+				<button id="run">run</button> <label id="delay-label">Delay: <input id="delay" value="0"></label>
+			</div>
+			<footer>
+				<p>
+					&copy; Copyright 2011 by <a href="http://meshokmuki.appspot.com">pozadi</a>
+				</p>
+			</footer>
+		</div>
+	</body>
+</html>
