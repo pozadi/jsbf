@@ -4,18 +4,31 @@
 		<meta charset="utf-8" />
 		<title>JavaScript brainfuck interpreter</title>
 		<style>
+			html, body {
+				height: 100%;
+				padding: 0;
+				margin: 0;
+			}
 			label, 
 			textarea { display: block; }
 			label { margin-top: 1em; }
 			textarea { width: 600px; }
+			h1 {
+				margin-top: 0;
+				padding-top: .5em;
+			}
 			#program { height: 10em; }
 			#out { height: 5em; }
 			#in { height: 2em; }
 			#in.waiting { background-color: #ff9; }
-			#wrap {
+			#wrap, #second-wrap {
 				width: 700px;
 				margin: 0 auto;
 			}
+			#wrap {
+				min-height: 100%;
+			}
+
 			#stack {
 				display: block;
 				float: right;
@@ -33,8 +46,8 @@
 			#delay { width: 2em; }
 			#delay-label { display: inline; }
 
-			#under {
-				margin-top: 6em;
+			#more-footered-footer {
+				clear: right;
 			}
 		</style>
 		<script>
@@ -237,19 +250,21 @@
 				<textarea id="out" readonly></textarea>
 				
 				<br>
-				<button id="run">run</button> <label id="delay-label">Delay: <input id="delay" value="0"></label>
+				<label id="delay-label">Delay: <input id="delay" value="0"></label>
+				<button id="run">run</button>
 			</div>
 			<footer>
 				<p>
 					&copy; Copyright 2011 by <a href="http://meshokmuki.appspot.com">pozadi</a>
 				</p>
 			</footer>
+		</div>
+		<div id="second-wrap">
 
-			<div id="under">
-				<h2>Wondering what to try? Try this.</h2>
-				
-				<p>Use this as a program:
-					<code><pre>
+			<h2 id="under">Wondering what to try? Try this.</h2>
+			
+			<p>Use this as a program:
+				<code><pre>
 >>>+[,>+++++++[<------>-]<[->+>+<<]>>[-<<+>>]<->+<[>-<[-]]>[-<<[-]++++
 +>>>>>]<<[->+>+<<]>>[-<<+>>]<-->+<[>-<[-]]>[-<<[-]++++++++>>>>>]<<[->+
 >+<<]>>[-<<+>>]<--->+<[>-<[-]]>[-<<[-]++++++>>>>>]<<[->+>+<<]>>[-<<+>>
@@ -269,21 +284,24 @@
 >>]+>-<[-<<]<<<<<[<<<]>>]<<->+<[>-]>[->>[>>>]>[->+>>+<<<]>[-<+>]>>[-[-
 >>+<<]+>>]+>.<[-<<]<<<<<[<<<]>>]<<->+<[>-]>[->>[>>>]>[->+>>+<<<]>[-<+>
 ]>>[-[->>+<<]+>>]+>,<[-<<]<<<<<[<<<]>>]<<++++++++>>>]
-					</pre></code>
-				</p>
-				
-				<p>And our "Hello world!" program as an input data:
-					<code><pre>
+				</pre></code>
+			</p>
+			
+			<p>And our "Hello world!" program as an input data:
+				<code><pre>
 ++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<++
 +++++++++++++.>.+++.------.--------.>+.>.:
-					</pre></code>
-				</p>
-				
-				<p>See what will happen ;-)</p>
-				
-				<p><a href="http://www.iwriteiam.nl/Ha_vs_bf_inter.html" target="_blank">More info</a></p>
-				
-			</div>
+				</pre></code>
+			</p>
+			
+			<p>See what will happen ;-)</p>
+			
+			<p><a href="http://www.iwriteiam.nl/Ha_vs_bf_inter.html" target="_blank">More info</a></p>
+
+			<footer id="more-footered-footer">
+				<small>You are good in scrolling, aren't you?</small>
+			</footer>
 		</div>
+
 	</body>
 </html>
